@@ -4,6 +4,7 @@ https://edu.csdn.net/course/detail/29666
 制作人信息:
     微信: gamefunc / 18576539615
     qq: 32686647
+转载与修改需要附带以上信息;
 """
 
 # 本节内容: websocket控制机械臂
