@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>  
+        <title>gamefunc: robo_arms_control</title>
+    </head>
+
+    <body>
+        
+        <h1 id = "SHOW_TEXT_H1">控制机械臂: (websocket 未连接)</h1>
+        <h1 id="button_description" >
+            w: 爪前; s: 爪后; a: 左转; d: 右转;<br>
+            空格: 爪上; ctrl: 爪下;<br>
+            1: 爪开; 2: 爪合;
+        </h1>
+
+        <br><hr><br>
+
+        <!-- 创建一个div, 用于显示从 websocket 发送过来的信息 -->
+        <div id="ws_msg_black_board" 
+            style="
+                /* 设置blackboard宽度 */
+                width:900px; 
+                /* 设置blackboard高度*/
+                height:100px; 
+                /* 背景: 黑色*/
+                background-color:black; 
+                /* 字体: 白色*/
+                color:white; 
+                /* 边框 红色*/
+                border: solid 2px rgb(243,12,70); 
+                /* 内容多到超过了这个blackboard尺寸后干什么, 默认滚动机制 */
+                overflow:auto ;
+                margin:0px auto;
+                
+            "
+        ></div>
+
+        <br><hr><br>
+
+
+        <input type="button"
+            id = "on_off_button"
+            onclick="switch_on_off()"
+            value="步进角度, 可以是小数点, 该按按钮绿色的时候允许控制servo电机">
+
+        <input type="text" id="turn_step" value="0.5">
+
+
+        <!--javascript 相关代码: 开始-->
+        <script type="text/javascript">
+            var CAN_CTL_SERVO = true;
+            // send websocket 的开关;
+            function switch_on_off(){
+                if(CAN_CTL_SERVO == false){
+                    CAN_CTL_SERVO = true;
+                    document.getElementById(
+                        "on_off_button").style.backgroundColor = "green";
+                }else{
+                    CAN_CTL_SERVO = false;
+                    document.getElementById(
+                        "on_off_button").style.backgroundColor = "red";
+                }
+            }// switch_on_off()
+            // 先允许一次, 开头不允许控制电机;
+            switch_on_off();
+
+
+            // 实例化websockets连接;
+            var WS_CON = new WebSocket("ws://10.2.0.252/servo_control");
+            // 当ws_con实例连上后执行函数里面内容;
+            WS_CON.onopen = function(){
+                console.log("已链上ws");
+                document.getElementById("SHOW_TEXT_H1").innerHTML = 
+                    "控制机械臂: (websocket 已连接)";
+            }// WS_CON.onopen()
+
+
+            // 当ws_con收到消息后显示;
+            WS_CON.onmessage = function(recv_msg){
+                // console.log("收到信息: " + recv_msg.data);
+                let recv_data = recv_msg.data;
+                let w = document.getElementById("ws_msg_black_board");
+                w.innerHTML = recv_data;
+            }// WS_CON.onmessage()
+
+
+            // 当ws_con实例连接过程发生错误时:
+            WS_CON.onerror = function(error_msg){
+                console.log("错误信息: " + error_msg);
+            }
+            // 当ws_con实例断开连接时:
+            WS_CON.onclose = function(close_msg){
+                console.log(close_msg);
+            }
+        
+
+            // 监听用户按下哪个按键并且干什么的函数;
+            document.onkeydown = function(event){
+                if(CAN_CTL_SERVO == false){ return; }
+                // 获取用户按下哪个案件:
+                let k = String.fromCharCode(
+                    event.keyCode).toLowerCase();
+                console.log(k);
+
+                // 获取 加/减 多少度;
+                let turn_step = document.getElementById("turn_step").value;
+
+                // 判断 turn_step 是不是 数字;
+                if(isNaN(turn_step) == true){ return; }
+
+
+                // f"{控制的电机号的k}_{添加/减少多少度}_p加m减"
+                let protocol_msg = "";
+                if(k == " "){// 爪上
+                    protocol_msg = `16_${turn_step}_p`;
+                }else if(k == ""){// 爪下
+                    protocol_msg = `16_${turn_step}_m`;
+                }else if(k == "1"){// 爪开
+                    protocol_msg = `19_${turn_step}_p`;
+                }else if(k == "2"){// 爪合
+                    protocol_msg = `19_${turn_step}_m`;
+                }else if(k == "w"){// 爪前
+                    protocol_msg = `17_${turn_step}_p`;
+                }else if(k == "s"){// 爪后
+                    protocol_msg = `17_${turn_step}_m`;
+                }else if(k == "a"){// 左转
+                    protocol_msg = `18_${turn_step}_p`;
+                }else if(k == "d"){// 右转
+                    protocol_msg = `18_${turn_step}_m`;
+                }else{
+                    return;
+                }
+
+                console.log(protocol_msg);
+                WS_CON.send(protocol_msg);
+            }// document.onkeydown()
+        </script>
+        <!--javascript 相关代码: 结束-->
+
+
+    </body>
+
+</html>
